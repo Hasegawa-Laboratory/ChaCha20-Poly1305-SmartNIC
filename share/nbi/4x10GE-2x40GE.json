@@ -1,0 +1,276 @@
+{
+    "chan_config":
+    {
+        "egress_cmd_prepend_mask31_0": "0x0",
+        "egress_cmd_prepend_mask63_32": "0x0",
+        "egress_cmd_prepend_mask95_64": "0x0",
+        "egress_cmd_prepend_mask127_96": "0x0",
+        "pause_wm00_31": [
+            16, 16, 16, 16, 16, 16, 16, 16,
+            16, 16, 16, 16, 16, 16, 16, 16,
+            16, 16, 16, 16, 16, 16, 16, 16,
+            16, 16, 16, 16, 16, 16, 16, 16
+        ],
+        "pause_wm32_63": [
+            16, 16, 16, 16, 16, 16, 16, 16,
+            16, 16, 16, 16, 16, 16, 16, 16,
+            16, 16, 16, 16, 16, 16, 16, 16,
+            16, 16, 16, 16, 16, 16, 16, 16
+        ],
+        "pause_wm64_95": [
+            16, 16, 16, 16, 16, 16, 16, 16,
+            16, 16, 16, 16, 16, 16, 16, 16,
+            16, 16, 16, 16, 16, 16, 16, 16,
+            16, 16, 16, 16, 16, 16, 16, 16
+        ],
+        "pause_wm96_127": [
+            16, 16, 16, 16, 16, 16, 16, 16,
+            16, 16, 16, 16, 16, 16, 16, 16,
+            16, 16, 16, 16, 16, 16, 16, 16,
+            16, 16, 16, 16, 16, 16, 16, 16
+        ]
+    },
+    "enet_default":
+    {
+        "drop_delta": 15,
+        "egress_parser_skip_bytes": 0,
+        "highwater_mark": 200,
+        "ig_dq_dwrr_weight": 256,
+        "ingress_parse_prepend_en": false,
+        "ingress_timestamp_prepend_en": false,
+        "kx_autoneg_enable": false,
+        "kx_autoneg_link_training": 0,
+        "kx_autoneg_nonce": 26,
+        "kx_fec_ability": 0,
+        "kx_fec_requested": 0,
+        "link_timer": 100,
+        "frame_length": 10240,
+        "egress_port_rr": true,
+        "pause_pfc_comp": false,
+        "pfc_mode": false,
+        "promis_en": true,
+        "pad_en": true,
+        "sgmii_ena": false,
+        "pause_quanta": [
+            1629, 750, 1586, 1496, 1522, 1797, 731, 1837
+        ],
+        "pause_thresh": [
+            431, 351, 745, 530, 707, 814, 259, 464
+        ],
+        "pcp_remap": [
+            0, 1, 2, 3, 3, 3, 3, 3
+        ],
+        "pcs_loopback": false,
+        "untagged_chan": 63
+    },
+    "enet_ports": {
+        "0": {
+            "enabled": true,
+            "lane_mode": "10G",
+            "ig_dq_dwrr_weight": 256,
+            "link_timer": 100,
+            "mac_addr": "00:00:00:00:00:00",
+            "pause_quanta": [
+                1629, 750, 1586, 1496, 1522, 1797, 731, 1837
+            ],
+            "pause_thresh": [
+                431, 351, 745, 530, 707, 814, 259, 464
+            ],
+            "pcp_remap": [
+                0, 1, 2, 3, 3, 3, 3, 3
+            ],
+            "channel_base": 0,
+            "num_channels": 4,
+            "untagged_chan": 3
+        },
+        "1": {
+            "enabled": true,
+            "lane_mode": "10G",
+            "ig_dq_dwrr_weight": 256,
+            "link_timer": 100,
+            "mac_addr": "00:00:00:00:00:00",
+            "pause_quanta": [
+                1629, 750, 1586, 1496, 1522, 1797, 731, 1837
+            ],
+            "pause_thresh": [
+                431, 351, 745, 530, 707, 814, 259, 464
+            ],
+            "pcp_remap": [
+                0, 1, 2, 3, 3, 3, 3, 3
+            ],
+            "channel_base": 4,
+            "num_channels": 4,
+            "untagged_chan": 7
+        },
+        "2": {
+            "enabled": true,
+            "lane_mode": "10G",
+            "drop_delta": 16,
+            "link_timer": 100,
+            "mac_addr": "00:00:00:00:00:00",
+            "pause_quanta": [
+                1629, 750, 1586, 1496, 1522, 1797, 731, 1837
+            ],
+            "pause_thresh": [
+                431, 351, 745, 530, 707, 814, 259, 464
+            ],
+            "pcp_remap": [
+                0, 1, 2, 3, 3, 3, 3, 3
+            ],
+            "channel_base": 8,
+            "num_channels": 4,
+            "untagged_chan": 11
+        },
+        "3": {
+            "enabled": true,
+            "lane_mode": "10G",
+            "link_timer": 100,
+            "mac_addr": "00:00:00:00:00:00",
+            "pause_quanta": [
+                1629, 750, 1586, 1496, 1522, 1797, 731, 1837
+            ],
+            "pause_thresh": [
+                431, 351, 745, 530, 707, 814, 259, 464
+            ],
+            "pcp_remap": [
+                0, 1, 2, 3, 3, 3, 3, 3
+            ],
+            "channel_base": 12,
+            "num_channels": 4,
+            "untagged_chan": 15
+        },
+        "4": {
+            "enabled": true,
+            "lane_mode": "40G",
+            "drop_delta": 20,
+            "highwater_mark": 400,
+            "ig_dq_dwrr_weight": 1024,
+            "mac_addr": "00:00:00:00:00:00",
+            "pause_quanta": [
+                1288, 1885, 1581, 1619, 1420, 1402, 1940, 1711
+            ],
+            "pause_thresh": [
+                527, 590, 637, 715, 397, 386, 523, 754
+            ],
+            "pcp_remap": [
+                0, 0, 0, 0, 0, 0, 0, 0
+            ],
+            "channel_base": 16,
+            "num_channels": 4,
+            "untagged_chan": 19
+        },
+        "5": {
+            "enabled": false,
+            "num_channels": 0,
+            "lane_mode": "OFF"
+        },
+        "6": {
+            "enabled": false,
+            "num_channels": 0,
+            "lane_mode": "OFF"
+        },
+        "7": {
+            "enabled": false,
+            "num_channels": 0,
+            "lane_mode": "OFF"
+        },
+        "8": {
+            "enabled": true,
+            "lane_mode": "40G",
+            "drop_delta": 20,
+            "highwater_mark": 400,
+            "ig_dq_dwrr_weight": 1024,
+            "link_timer": 100,
+            "mac_addr": "00:00:00:00:00:00",
+            "pause_quanta": [
+                686, 1232, 907, 1915, 884, 1870, 1357, 1824
+            ],
+            "pause_thresh": [
+                309, 387, 315, 728, 373, 815, 473, 565
+            ],
+            "pcp_remap": [
+                0, 0, 0, 0, 0, 0, 0, 0
+            ],
+            "channel_base": 20,
+            "num_channels": 4,
+            "untagged_chan": 23
+        },
+        "9": {
+            "enabled": false,
+            "num_channels": 0,
+            "lane_mode": "OFF"
+        },
+        "10": {
+            "enabled": false,
+            "num_channels": 0,
+            "lane_mode": "OFF"
+        },
+        "11": {
+            "enabled": false,
+            "num_channels": 0,
+            "lane_mode": "OFF"
+        }
+    },
+    "ilk_config": {
+        "0": {
+            "enabled": false,
+            "egress_parser_skip_bytes": 0,
+            "ig_dq_dwrr_weight": 0,
+            "ig_dq_segmented": false,
+            "ingress_parse_prepend_en": false,
+            "ingress_timestamp_prepend_en": false,
+            "channel_base": 0,
+            "num_channels": 0,
+            "num_lanes": 0,
+            "outband": false,
+            "packet_mode": true,
+            "highwater_mark": 0,
+            "drop_delta": 0,
+            "rx": {
+                "burst_max": 384,
+                "burst_min": 192,
+                "burst_short": 64,
+                "inband": true,
+                "lane_disable": "0x0",
+                "metaframe_period": 2048,
+                "mult_ch": false,
+                "mult_ext": false,
+                "mult_fc": false,
+                "outband": false,
+                "scram_dis": false,
+                "skip_dis": false
+            },
+            "tx": {
+                "burst_max": 384,
+                "burst_min": 192,
+                "burst_short": 64,
+                "inband": true,
+                "lane_disable": "0x0",
+                "metaframe_period": 1024,
+                "mult_ch": false,
+                "mult_ext": false,
+                "mult_fc": false,
+                "outband": false,
+                "scram_dis": false,
+                "skip_dis": false
+            }
+        }
+    },
+    "serdes_config": {
+        "0": {
+            "bit_rate": "10p3125",
+            "clk_muxsel": 0,
+            "enabled": true
+        },
+        "1": {
+            "bit_rate": "10p3125",
+            "clk_muxsel": 15,
+            "enabled": true
+        },
+        "2": {
+            "bit_rate": "10p3125",
+            "clk_muxsel": 15,
+            "enabled": true
+        }
+    }
+}
