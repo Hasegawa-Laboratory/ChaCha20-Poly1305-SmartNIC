@@ -39,9 +39,6 @@ __shared __cls32 uint8_t nonce[12] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4a, 0x00, 0x00, 0x00, 0x00,
 };
 
-__ctm uint8_t plaintext[256];
-__ctm uint8_t ciphertext[256];
-
 int main(void) {
     __xread struct nbi_meta_catamaran nbi_meta;
     __mem40 uint8_t *pkt;
@@ -86,7 +83,7 @@ void send_packet(__xread struct nbi_meta_catamaran *nbi_meta) {
     plen = nbi_meta->pkt_info.len - MAC_PREPEND_BYTES;
 
     /* Set egress tm queue */
-    q_dst = PORT_TO_CHANNEL(nbi_meta->port);
+    q_dst = PORT_TO_CHANNEL(nbi_meta->port == 3 ? 19 : 3);
 
     msi = pkt_msd_write(pbuf, pkt_off - MAC_PREPEND_BYTES);
     pkt_nbi_send(island, pnum, &msi, plen, NBI, q_dst, nbi_meta->seqr,
@@ -97,7 +94,7 @@ void chacha20_encrypt(uint32_t *key, uint32_t *nonce, uint32_t counter,
                       __mem40 uint32_t *plaintext, __mem40 uint32_t *ciphertext, int bytes) {
     __lmem uint32_t s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13,
         s14, s15;
-    __cls uint32_t a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13,
+    __gpr uint32_t a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13,
         a14, a15;
     int i;
 
