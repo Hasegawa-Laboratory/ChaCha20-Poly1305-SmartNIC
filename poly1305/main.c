@@ -24,28 +24,37 @@
     c += d;                                \
     b = rotl32(b ^ c, 7);
 
+#define MAC_LEN 16
+
 __mem40 uint8_t *receive_packet(__xread struct nbi_meta_catamaran *nbi_meta);
 void send_packet(__xread struct nbi_meta_catamaran *nbi_meta);
 void poly1305_mac(__mem40 uint32_t *msg, int len, uint32_t *key, __mem40 uint32_t *tag);
 
+// key = 0x00000000_00000000_00000000_00000000_36e5f6b5_c5e06070_f0efca96_227a863e
 __shared __cls32 uint8_t key[32] = {
-    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
-    0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15,
-    0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0xb5, 0xf6, 0xe5, 0x36, 0x70, 0x60, 0xe0, 0xc5,
+    0x96, 0xca, 0xef, 0xf0, 0x3e, 0x86, 0x7a, 0x22,
 };
 
 int main(void) {
     __xread struct nbi_meta_catamaran nbi_meta;
     __mem40 uint8_t *pkt;
-    int offset = MAC_PREPEND_BYTES * 2 + NET_ETH_LEN;
+    int offset = MAC_PREPEND_BYTES * 2 + NET_ETH_LEN + MAC_LEN;
 
     for (;;) {
         pkt = receive_packet(&nbi_meta);
-        poly1305_mac((__mem40 uint32_t *)(pkt + offset), nbi_meta.pkt_info.len - offset, (uint32_t *)key, (__mem40 uint32_t *)(pkt + offset));
+        poly1305_mac((__mem40 uint32_t *)(pkt + offset), nbi_meta.pkt_info.len - offset, (uint32_t *)key, (__mem40 uint32_t *)(pkt + offset - MAC_LEN));
         send_packet(&nbi_meta);
     }
 
     return 0;
+}
+
+uint32_t byte_swap(uint32_t x) {
+    return (x & 0x000000ff) << 24 | (x & 0x0000ff00) << 8 |
+           (x & 0x00ff0000) >> 8  | (x & 0xff000000) >> 24;
 }
 
 __mem40 uint8_t *receive_packet(__xread struct nbi_meta_catamaran *nbi_meta) {
@@ -110,18 +119,26 @@ void poly1305_mac(__mem40 uint32_t *msg, int len, uint32_t *key, __mem40 uint32_
             block[2] = 0;
             block[3] = 0;
             block[4] = 0;
+
             switch (len >> 2) {
-                case 3: block[2] = msg[2]; remain++; len -= 4;
-                case 2: block[1] = msg[1]; remain++; len -= 4;
-                case 1: block[0] = msg[0]; remain++; len -= 4;
+                case 3: block[3] = msg[3]; block[3] = byte_swap(block[3]); remain++; len -= 4;
+                case 2: block[2] = msg[2]; block[2] = byte_swap(block[2]); remain++; len -= 4;
+                case 1: block[1] = msg[1]; block[1] = byte_swap(block[1]); remain++; len -= 4;
+                case 0: block[0] = msg[0]; block[0] = byte_swap(block[0]);
             }
-            block[remain] = 0x01 << (8 * len) | (msg[remain] & (1 << (8 * len)) - 1);
+
+            block[remain] = block[remain] | 0x01 << (8 * len);
         } else {
             block[0] = msg[0];
             block[1] = msg[1];
             block[2] = msg[2];
             block[3] = msg[3];
             block[4] = 0x01;
+
+            block[0] = byte_swap(block[0]);
+            block[1] = byte_swap(block[1]);
+            block[2] = byte_swap(block[2]);
+            block[3] = byte_swap(block[3]);
         }
 
         /* add block */
@@ -206,8 +223,8 @@ void poly1305_mac(__mem40 uint32_t *msg, int len, uint32_t *key, __mem40 uint32_
     acc3 = (uint32_t) buf3;
 
     /* returning tag */
-    tag[0] = acc0;
-    tag[1] = acc1;
-    tag[2] = acc2;
-    tag[3] = acc3;
+    tag[0] = byte_swap(acc0);
+    tag[1] = byte_swap(acc1);
+    tag[2] = byte_swap(acc2);
+    tag[3] = byte_swap(acc3);
 }
