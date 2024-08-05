@@ -29,20 +29,23 @@ void send_packet(__xread struct nbi_meta_catamaran *nbi_meta);
 void chacha20_encrypt(uint32_t *key, uint32_t *nonce, uint32_t counter,
                       __mem40 uint32_t *plaintext, __mem40 uint32_t *ciphertext, int bytes);
 
+// key = 0x00010203_04050607_08090a0b_0c0d0e0f_10111213_14151617_18191a1b_1c1d1e1f
 __shared __cls32 uint8_t key[32] = {
-    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
-    0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15,
-    0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+    0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04,
+    0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c,
+    0x13, 0x12, 0x11, 0x10, 0x17, 0x16, 0x15, 0x14,
+    0x1b, 0x1a, 0x19, 0x18, 0x1f, 0x1e, 0x1d, 0x1c,
 };
 
+// nonce = 0x00000000_0000004a_00000000
 __shared __cls32 uint8_t nonce[12] = {
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4a, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x4a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
 int main(void) {
     __xread struct nbi_meta_catamaran nbi_meta;
     __mem40 uint8_t *pkt;
-    int offset = MAC_PREPEND_BYTES * 2 + NET_ETH_ALEN;
+    int offset = MAC_PREPEND_BYTES * 2 + NET_ETH_LEN;
 
     for (;;) {
         pkt = receive_packet(&nbi_meta);
@@ -52,6 +55,11 @@ int main(void) {
     }
 
     return 0;
+}
+
+uint32_t byte_swap(uint32_t x) {
+    return (x & 0x000000ff) << 24 | (x & 0x0000ff00) << 8 |
+           (x & 0x00ff0000) >> 8  | (x & 0xff000000) >> 24;
 }
 
 __mem40 uint8_t *receive_packet(__xread struct nbi_meta_catamaran *nbi_meta) {
@@ -98,12 +106,10 @@ void chacha20_encrypt(uint32_t *key, uint32_t *nonce, uint32_t counter,
         a14, a15;
     int i;
 
-    const uint32_t *constant = (uint32_t *)"expand 32-byte k";
-
-    s0 = constant[0];
-    s1 = constant[1];
-    s2 = constant[2];
-    s3 = constant[3];
+    s0 = 0x61707865;
+    s1 = 0x3320646e;
+    s2 = 0x79622d32;
+    s3 = 0x6b206574;
     s4 = key[0];
     s5 = key[1];
     s6 = key[2];
@@ -168,55 +174,55 @@ void chacha20_encrypt(uint32_t *key, uint32_t *nonce, uint32_t counter,
         if (bytes < 61) {
             switch ((bytes - 1) >> 2) {
                 case 14:
-                    ciphertext[14] = a14 ^ plaintext[14];
+                    ciphertext[14] = byte_swap(a14) ^ plaintext[14];
                 case 13:
-                    ciphertext[13] = a13 ^ plaintext[13];
+                    ciphertext[13] = byte_swap(a13) ^ plaintext[13];
                 case 12:
-                    ciphertext[12] = a12 ^ plaintext[12];
+                    ciphertext[12] = byte_swap(a12) ^ plaintext[12];
                 case 11:
-                    ciphertext[11] = a11 ^ plaintext[11];
+                    ciphertext[11] = byte_swap(a11) ^ plaintext[11];
                 case 10:
-                    ciphertext[10] = a10 ^ plaintext[10];
+                    ciphertext[10] = byte_swap(a10) ^ plaintext[10];
                 case 9:
-                    ciphertext[9] = a9 ^ plaintext[9];
+                    ciphertext[9] = byte_swap(a9) ^ plaintext[9];
                 case 8:
-                    ciphertext[8] = a8 ^ plaintext[8];
+                    ciphertext[8] = byte_swap(a8) ^ plaintext[8];
                 case 7:
-                    ciphertext[7] = a7 ^ plaintext[7];
+                    ciphertext[7] = byte_swap(a7) ^ plaintext[7];
                 case 6:
-                    ciphertext[6] = a6 ^ plaintext[6];
+                    ciphertext[6] = byte_swap(a6) ^ plaintext[6];
                 case 5:
-                    ciphertext[5] = a5 ^ plaintext[5];
+                    ciphertext[5] = byte_swap(a5) ^ plaintext[5];
                 case 4:
-                    ciphertext[4] = a4 ^ plaintext[4];
+                    ciphertext[4] = byte_swap(a4) ^ plaintext[4];
                 case 3:
-                    ciphertext[3] = a3 ^ plaintext[3];
+                    ciphertext[3] = byte_swap(a3) ^ plaintext[3];
                 case 2:
-                    ciphertext[2] = a2 ^ plaintext[2];
+                    ciphertext[2] = byte_swap(a2) ^ plaintext[2];
                 case 1:
-                    ciphertext[1] = a1 ^ plaintext[1];
+                    ciphertext[1] = byte_swap(a1) ^ plaintext[1];
                 case 0:
-                    ciphertext[0] = a0 ^ plaintext[0];
+                    ciphertext[0] = byte_swap(a0) ^ plaintext[0];
             }
             return;
         }
 
-        ciphertext[0] = a0 ^ plaintext[0];
-        ciphertext[1] = a1 ^ plaintext[1];
-        ciphertext[2] = a2 ^ plaintext[2];
-        ciphertext[3] = a3 ^ plaintext[3];
-        ciphertext[4] = a4 ^ plaintext[4];
-        ciphertext[5] = a5 ^ plaintext[5];
-        ciphertext[6] = a6 ^ plaintext[6];
-        ciphertext[7] = a7 ^ plaintext[7];
-        ciphertext[8] = a8 ^ plaintext[8];
-        ciphertext[9] = a9 ^ plaintext[9];
-        ciphertext[10] = a10 ^ plaintext[10];
-        ciphertext[11] = a11 ^ plaintext[11];
-        ciphertext[12] = a12 ^ plaintext[12];
-        ciphertext[13] = a13 ^ plaintext[13];
-        ciphertext[14] = a14 ^ plaintext[14];
-        ciphertext[15] = a15 ^ plaintext[15];
+        ciphertext[0] = byte_swap(a0) ^ plaintext[0];
+        ciphertext[1] = byte_swap(a1) ^ plaintext[1];
+        ciphertext[2] = byte_swap(a2) ^ plaintext[2];
+        ciphertext[3] = byte_swap(a3) ^ plaintext[3];
+        ciphertext[4] = byte_swap(a4) ^ plaintext[4];
+        ciphertext[5] = byte_swap(a5) ^ plaintext[5];
+        ciphertext[6] = byte_swap(a6) ^ plaintext[6];
+        ciphertext[7] = byte_swap(a7) ^ plaintext[7];
+        ciphertext[8] = byte_swap(a8) ^ plaintext[8];
+        ciphertext[9] = byte_swap(a9) ^ plaintext[9];
+        ciphertext[10] = byte_swap(a10) ^ plaintext[10];
+        ciphertext[11] = byte_swap(a11) ^ plaintext[11];
+        ciphertext[12] = byte_swap(a12) ^ plaintext[12];
+        ciphertext[13] = byte_swap(a13) ^ plaintext[13];
+        ciphertext[14] = byte_swap(a14) ^ plaintext[14];
+        ciphertext[15] = byte_swap(a15) ^ plaintext[15];
 
         s12++;
 
