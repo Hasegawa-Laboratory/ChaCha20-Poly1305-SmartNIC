@@ -42,7 +42,7 @@ __shared __cls32 uint8_t nonce[12] = {
 int main(void) {
     __xread struct nbi_meta_catamaran nbi_meta;
     __mem40 uint8_t *pkt;
-    int offset = MAC_PREPEND_BYTES + NET_ETH_ALEN;
+    int offset = MAC_PREPEND_BYTES * 2 + NET_ETH_ALEN;
 
     for (;;) {
         pkt = receive_packet(&nbi_meta);
