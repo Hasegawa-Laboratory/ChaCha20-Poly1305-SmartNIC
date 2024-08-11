@@ -109,10 +109,9 @@ void chacha20_poly1305_aead_encrypt(uint32_t *key, uint32_t *nonce, __mem40 uint
     __gpr uint64_t buf0, buf1, buf2, buf3, buf4;
     __lmem uint64_t carry;
     /* chacha-poly variable */
-    __gpr int bytes = msg_len;
-    __mem40 uint32_t *cipher = ciphertext;
-    __lmem uint32_t aad_length = aad_len, msg_length = msg_len;
-    int i;
+    __lmem uint32_t data[16];
+    __lmem int len;
+    __lmem int i;
 
     /* init chacha state (counter = 0) */
     s0 = 0x61707865;
@@ -132,7 +131,7 @@ void chacha20_poly1305_aead_encrypt(uint32_t *key, uint32_t *nonce, __mem40 uint
     s14 = nonce[1];
     s15 = nonce[2];
 
-    /* generate poly1305 key */
+    /* generate poly1305 keys (r, ps) */
     a0 = s0;
     a1 = s1;
     a2 = s2;
@@ -190,8 +189,97 @@ void chacha20_poly1305_aead_encrypt(uint32_t *key, uint32_t *nonce, __mem40 uint
 
     s12++;
 
+    /* calc poly1305 aad */
+    len = aad_len;
     for (;;) {
-        if (bytes == 0) break;
+        /* make block */
+        if (len <= 0) break;
+        if (len < 16) {
+            block[0] = 0;
+            block[1] = 0;
+            block[2] = 0;
+            block[3] = 0;
+            block[4] = 0x01;
+            switch (len >> 2) {
+                case 3: block[3] = aad[3];
+                case 2: block[2] = aad[2];
+                case 1: block[1] = aad[1];
+                case 0: block[0] = aad[0];
+            }
+        } else {
+            block[0] = aad[0];
+            block[1] = aad[1];
+            block[2] = aad[2];
+            block[3] = aad[3];
+            block[4] = 0x01;
+        }
+
+        /* add block */
+        buf0 = acc0 + block[0];
+        buf1 = acc1 + block[1];
+        buf2 = acc2 + block[2];
+        buf3 = acc3 + block[3];
+        buf4 = acc4 + block[4];
+
+        buf1 += (buf0 >> 32);
+        buf2 += (buf1 >> 32);
+        buf3 += (buf2 >> 32);
+        buf4 += (buf3 >> 32);
+
+        acc0 = (uint32_t) buf0;
+        acc1 = (uint32_t) buf1;
+        acc2 = (uint32_t) buf2;
+        acc3 = (uint32_t) buf3;
+        acc4 = (uint32_t) buf4;
+
+        /* multiply r */
+        /* compute acc * r */
+        buf0 = (uint64_t) acc0 * r0 +
+                 (uint64_t) 5 * acc1 * (r3 >> 2) + (uint64_t) 5 * acc2 * (r2 >> 2) + (uint64_t) 5 * acc3 * (r1 >> 2) + (uint64_t) 5 * acc4 * (r0 >> 2);
+        buf1 = (uint64_t) acc0 * r1 + (uint64_t) acc1 * r0 +
+                 (uint64_t) 5 * acc2 * (r3 >> 2) + (uint64_t) 5 * acc3 * (r2 >> 2) + (uint64_t) 5 * acc4 * (r1 >> 2);
+        buf2 = (uint64_t) acc0 * r2 + (uint64_t) acc1 * r1 + (uint64_t) acc2 * r0 +
+                 (uint64_t) 5 * acc3 * (r3 >> 2) + (uint64_t) 5 * acc4 * (r2 >> 2);
+        buf3 = (uint64_t) acc0 * r3 + (uint64_t) acc1 * r2 + (uint64_t) acc2 * r1 + (uint64_t) acc3 * r0 +
+                 (uint64_t) 5 * acc4 * (r3 >> 2);
+
+        /* compute carry */
+        buf4 = acc4 * (r0 & 3) + (buf3 >> 32);
+        carry = 5 * (buf4 >> 2);
+        carry += (uint32_t) buf0;                  acc0 = (uint32_t) carry; carry >>= 32;
+        carry += (uint32_t) buf1 + (buf0 >> 32); acc1 = (uint32_t) carry; carry >>= 32;
+        carry += (uint32_t) buf2 + (buf1 >> 32); acc2 = (uint32_t) carry; carry >>= 32;
+        carry += (uint32_t) buf3 + (buf2 >> 32); acc3 = (uint32_t) carry; carry >>= 32;
+        carry += (buf4 & 3);             acc4 = (uint32_t) carry;
+
+        len -= 16;
+        aad += 4;
+    }
+
+    /* calc chacha20 and poly msg */
+    len = msg_len;
+    for (;;) {
+        if (len <= 0) return;
+
+        /* copy from CTM */
+        data[0] = plaintext[0];
+        data[1] = plaintext[1];
+        data[2] = plaintext[2];
+        data[3] = plaintext[3];
+        data[4] = plaintext[4];
+        data[5] = plaintext[5];
+        data[6] = plaintext[6];
+        data[7] = plaintext[7];
+        data[8] = plaintext[8];
+        data[9] = plaintext[9];
+        data[10] = plaintext[10];
+        data[11] = plaintext[11];
+        data[12] = plaintext[12];
+        data[13] = plaintext[13];
+        data[14] = plaintext[14];
+        data[15] = plaintext[15];
+
+        /* calc chacha20 */
         a0 = s0;
         a1 = s1;
         a2 = s2;
@@ -238,165 +326,200 @@ void chacha20_poly1305_aead_encrypt(uint32_t *key, uint32_t *nonce, __mem40 uint
         a14 += s14;
         a15 += s15;
 
-        if (s12 == 0) {
-            r0 = a0 & 0x0fffffff;
-            r1 = a1 & 0x0ffffffc;
-            r2 = a2 & 0x0ffffffc;
-            r3 = a3 & 0x0ffffffc;
-            ps0 = a4;
-            ps1 = a5;
-            ps2 = a6;
-            ps3 = a7;
+        data[0]  =  a0 ^ data[0];
+        data[1]  =  a1 ^ data[1];
+        data[2]  =  a2 ^ data[2];
+        data[3]  =  a3 ^ data[3];
+        data[4]  =  a4 ^ data[4];
+        data[5]  =  a5 ^ data[5];
+        data[6]  =  a6 ^ data[6];
+        data[7]  =  a7 ^ data[7];
+        data[8]  =  a8 ^ data[8];
+        data[9]  =  a9 ^ data[9];
+        data[10] = a10 ^ data[10];
+        data[11] = a11 ^ data[11];
+        data[12] = a12 ^ data[12];
+        data[13] = a13 ^ data[13];
+        data[14] = a14 ^ data[14];
+        data[15] = a15 ^ data[15];
 
-            s12++;
-            continue;
+        /* calc poly */
+        for (i = 0; i < 4; i++) {
+            /* make block */
+            if (len < (i + 1) * 16) {
+                block[0] = 0;
+                block[1] = 0;
+                block[2] = 0;
+                block[3] = 0;
+                block[4] = 0x01;
+                switch ((len - i * 16) >> 2) {
+                    case 3:
+                        block[3] = data[i * 4 + 3];
+                        block[2] = data[i * 4 + 2];
+                        block[1] = data[i * 4 + 1];
+                        block[0] = data[i * 4 + 0];
+                        block[3] &= (1 << (((len - i * 16) & 3) * 8)) - 1;
+                        break;
+                    case 2:
+                        block[2] = data[i * 4 + 2];
+                        block[1] = data[i * 4 + 1];
+                        block[0] = data[i * 4 + 0];
+                        block[2] &= (1 << (((len - i * 16) & 3) * 8)) - 1;
+                        break;
+                    case 1:
+                        block[1] = data[i * 4 + 1];
+                        block[0] = data[i * 4 + 0];
+                        block[1] &= (1 << (((len - i * 16) & 3) * 8)) - 1;
+                        break;
+                    case 0:
+                        block[0] = data[i * 4 + 0];
+                        block[0] &= (1 << (((len - i * 16) & 3) * 8)) - 1;
+                        break;
+                }
+            } else {
+                block[0] = data[i * 4 + 0];
+                block[1] = data[i * 4 + 1];
+                block[2] = data[i * 4 + 2];
+                block[3] = data[i * 4 + 3];
+                block[4] = 0x01;
+            }
+
+            /* add block */
+            buf0 = acc0 + block[0];
+            buf1 = acc1 + block[1];
+            buf2 = acc2 + block[2];
+            buf3 = acc3 + block[3];
+            buf4 = acc4 + block[4];
+
+            buf1 += (buf0 >> 32);
+            buf2 += (buf1 >> 32);
+            buf3 += (buf2 >> 32);
+            buf4 += (buf3 >> 32);
+
+            acc0 = (uint32_t) buf0;
+            acc1 = (uint32_t) buf1;
+            acc2 = (uint32_t) buf2;
+            acc3 = (uint32_t) buf3;
+            acc4 = (uint32_t) buf4;
+
+            /* multiply r */
+            /* compute acc * r */
+            buf0 = (uint64_t) acc0 * r0 +
+                    (uint64_t) 5 * acc1 * (r3 >> 2) + (uint64_t) 5 * acc2 * (r2 >> 2) + (uint64_t) 5 * acc3 * (r1 >> 2) + (uint64_t) 5 * acc4 * (r0 >> 2);
+            buf1 = (uint64_t) acc0 * r1 + (uint64_t) acc1 * r0 +
+                    (uint64_t) 5 * acc2 * (r3 >> 2) + (uint64_t) 5 * acc3 * (r2 >> 2) + (uint64_t) 5 * acc4 * (r1 >> 2);
+            buf2 = (uint64_t) acc0 * r2 + (uint64_t) acc1 * r1 + (uint64_t) acc2 * r0 +
+                    (uint64_t) 5 * acc3 * (r3 >> 2) + (uint64_t) 5 * acc4 * (r2 >> 2);
+            buf3 = (uint64_t) acc0 * r3 + (uint64_t) acc1 * r2 + (uint64_t) acc2 * r1 + (uint64_t) acc3 * r0 +
+                    (uint64_t) 5 * acc4 * (r3 >> 2);
+
+            /* compute carry */
+            buf4 = acc4 * (r0 & 3) + (buf3 >> 32);
+            carry = 5 * (buf4 >> 2);
+            carry += (uint32_t) buf0;                  acc0 = (uint32_t) carry; carry >>= 32;
+            carry += (uint32_t) buf1 + (buf0 >> 32); acc1 = (uint32_t) carry; carry >>= 32;
+            carry += (uint32_t) buf2 + (buf1 >> 32); acc2 = (uint32_t) carry; carry >>= 32;
+            carry += (uint32_t) buf3 + (buf2 >> 32); acc3 = (uint32_t) carry; carry >>= 32;
+            carry += (buf4 & 3);             acc4 = (uint32_t) carry;
+
+            if (len <= (i + 1) * 16) {
+                break;
+            }
         }
 
-        if (bytes < 61) {
-            switch((bytes - 1) >> 2) {
-                case 14: ciphertext[14] = a14 ^ plaintext[14];
-                case 13: ciphertext[13] = a13 ^ plaintext[13];
-                case 12: ciphertext[12] = a12 ^ plaintext[12];
-                case 11: ciphertext[11] = a11 ^ plaintext[11];
-                case 10: ciphertext[10] = a10 ^ plaintext[10];
-                case  9: ciphertext[9]  =  a9 ^ plaintext[9];
-                case  8: ciphertext[8]  =  a8 ^ plaintext[8];
-                case  7: ciphertext[7]  =  a7 ^ plaintext[7];
-                case  6: ciphertext[6]  =  a6 ^ plaintext[6];
-                case  5: ciphertext[5]  =  a5 ^ plaintext[5];
-                case  4: ciphertext[4]  =  a4 ^ plaintext[4];
-                case  3: ciphertext[3]  =  a3 ^ plaintext[3];
-                case  2: ciphertext[2]  =  a2 ^ plaintext[2];
-                case  1: ciphertext[1]  =  a1 ^ plaintext[1];
-                case  0: ciphertext[0]  =  a0 ^ plaintext[0];
+        if (len < 61) {
+            switch((len - 1) >> 2) {
+                case 14: ciphertext[14] = data[14];
+                case 13: ciphertext[13] = data[13];
+                case 12: ciphertext[12] = data[12];
+                case 11: ciphertext[11] = data[11];
+                case 10: ciphertext[10] = data[10];
+                case  9: ciphertext[9]  = data[9];
+                case  8: ciphertext[8]  = data[8];
+                case  7: ciphertext[7]  = data[7];
+                case  6: ciphertext[6]  = data[6];
+                case  5: ciphertext[5]  = data[5];
+                case  4: ciphertext[4]  = data[4];
+                case  3: ciphertext[3]  = data[3];
+                case  2: ciphertext[2]  = data[2];
+                case  1: ciphertext[1]  = data[1];
+                case  0: ciphertext[0]  = data[0];
             }
             break;
         }
 
-        ciphertext[0]  =  a0 ^ plaintext[0];
-        ciphertext[1]  =  a1 ^ plaintext[1];
-        ciphertext[2]  =  a2 ^ plaintext[2];
-        ciphertext[3]  =  a3 ^ plaintext[3];
-        ciphertext[4]  =  a4 ^ plaintext[4];
-        ciphertext[5]  =  a5 ^ plaintext[5];
-        ciphertext[6]  =  a6 ^ plaintext[6];
-        ciphertext[7]  =  a7 ^ plaintext[7];
-        ciphertext[8]  =  a8 ^ plaintext[8];
-        ciphertext[9]  =  a9 ^ plaintext[9];
-        ciphertext[10] = a10 ^ plaintext[10];
-        ciphertext[11] = a11 ^ plaintext[11];
-        ciphertext[12] = a12 ^ plaintext[12];
-        ciphertext[13] = a13 ^ plaintext[13];
-        ciphertext[14] = a14 ^ plaintext[14];
-        ciphertext[15] = a15 ^ plaintext[15];
+        ciphertext[0]  = data[0];
+        ciphertext[1]  = data[1];
+        ciphertext[2]  = data[2];
+        ciphertext[3]  = data[3];
+        ciphertext[4]  = data[4];
+        ciphertext[5]  = data[5];
+        ciphertext[6]  = data[6];
+        ciphertext[7]  = data[7];
+        ciphertext[8]  = data[8];
+        ciphertext[9]  = data[9];
+        ciphertext[10] = data[10];
+        ciphertext[11] = data[11];
+        ciphertext[12] = data[12];
+        ciphertext[13] = data[13];
+        ciphertext[14] = data[14];
+        ciphertext[15] = data[15];
 
         s12++;
 
-        bytes -= 64;
+        len -= 64;
         plaintext  += 16;
         ciphertext += 16;
     }
 
-    /* auth date is 16 byte aligned */
-    bytes = (((aad_len >> 4) + 1) << 4) + (((msg_len >> 4) + 1) << 4) + 16;
-    /* gen mac */
-    for (;;) {
-        /* make block */
-        if (bytes <= 0) break;
-        block[0] = 0;
-        block[1] = 0;
-        block[2] = 0;
-        block[3] = 0;
-        if (bytes > (((msg_len >> 4) + 1) << 4) + 16) {
-            if (bytes - (((msg_len >> 4) + 1) << 4) - 16 <= 16) {
-                int remain = 0;
-                switch (aad_len >> 2) {
-                case 3: block[2] = aad[2]; remain++; aad_len -= 4;
-                case 2: block[1] = aad[1]; remain++; aad_len -= 4;
-                case 1: block[0] = aad[0]; remain++; aad_len -= 4;
-                }
-                block[remain] = aad[remain] & (1 << (8 * aad_len)) - 1;
-            } else {
-                block[0] = aad[0];
-                block[1] = aad[1];
-                block[2] = aad[2];
-                block[3] = aad[3];
-            }
-            block[4] = 0x01;
+    /* calc poly length */
+    block[0] = (uint32_t) aad_len;
+    // block[1] = aad_len >> 32;
+    block[1] = 0;
+    block[2] = (uint32_t) msg_len;
+    // block[3] = msg_len >> 32;
+    block[3] = 0;
+    block[4] = 0x01;
 
-            bytes -= 16;
-            aad_len -= 16;
-            aad += 4;
-        } else if (bytes > 16) {
-            if (bytes - 16 <= 16) {
-                int remain = 0;
-                switch (msg_len >> 2) {
-                case 3: block[2] = cipher[2]; remain++; msg_len -= 4;
-                case 2: block[1] = cipher[1]; remain++; msg_len -= 4;
-                case 1: block[0] = cipher[0]; remain++; msg_len -= 4;
-                }
-                block[remain] = cipher[remain] & (1 << (8 * msg_len)) - 1;
-            } else {
-                block[0] = cipher[0];
-                block[1] = cipher[1];
-                block[2] = cipher[2];
-                block[3] = cipher[3];
-            }
-            block[4] = 0x01;
+    /* add block */
+    buf0 = acc0 + block[0];
+    buf1 = acc1 + block[1];
+    buf2 = acc2 + block[2];
+    buf3 = acc3 + block[3];
+    buf4 = acc4 + block[4];
 
-            bytes -= 16;
-            msg_len -= 16;
-            cipher += 4;
-        } else {
-            block[0] = (uint32_t) aad_length;
-            // buf[1] = aad_length >> 32;
-            block[1] = 0;
-            block[2] = (uint32_t) msg_length;
-            // buf[3] = msg_length >> 32;
-            block[3] = 0;
-            block[4] = 0x01;
+    buf1 += (buf0 >> 32);
+    buf2 += (buf1 >> 32);
+    buf3 += (buf2 >> 32);
+    buf4 += (buf3 >> 32);
 
-            bytes -= 16;
-        }
+    acc0 = (uint32_t) buf0;
+    acc1 = (uint32_t) buf1;
+    acc2 = (uint32_t) buf2;
+    acc3 = (uint32_t) buf3;
+    acc4 = (uint32_t) buf4;
 
-        /* add block */
-        buf0 = acc0 + block[0];
-        buf1 = acc1 + block[1];
-        buf2 = acc2 + block[2];
-        buf3 = acc3 + block[3];
-        buf4 = acc4 + block[4];
+    /* multiply r */
+    /* compute acc * r */
+    buf0 = (uint64_t) acc0 * r0 +
+                (uint64_t) 5 * acc1 * (r3 >> 2) + (uint64_t) 5 * acc2 * (r2 >> 2) + (uint64_t) 5 * acc3 * (r1 >> 2) + (uint64_t) 5 * acc4 * (r0 >> 2);
+    buf1 = (uint64_t) acc0 * r1 + (uint64_t) acc1 * r0 +
+                (uint64_t) 5 * acc2 * (r3 >> 2) + (uint64_t) 5 * acc3 * (r2 >> 2) + (uint64_t) 5 * acc4 * (r1 >> 2);
+    buf2 = (uint64_t) acc0 * r2 + (uint64_t) acc1 * r1 + (uint64_t) acc2 * r0 +
+                (uint64_t) 5 * acc3 * (r3 >> 2) + (uint64_t) 5 * acc4 * (r2 >> 2);
+    buf3 = (uint64_t) acc0 * r3 + (uint64_t) acc1 * r2 + (uint64_t) acc2 * r1 + (uint64_t) acc3 * r0 +
+                (uint64_t) 5 * acc4 * (r3 >> 2);
 
-        buf1 += (buf0 >> 32);
-        buf2 += (buf1 >> 32);
-        buf3 += (buf2 >> 32);
-        buf4 += (buf3 >> 32);
+    /* compute carry */
+    buf4 = acc4 * (r0 & 3) + (buf3 >> 32);
+    carry = 5 * (buf4 >> 2);
+    carry += (uint32_t) buf0;                  acc0 = (uint32_t) carry; carry >>= 32;
+    carry += (uint32_t) buf1 + (buf0 >> 32); acc1 = (uint32_t) carry; carry >>= 32;
+    carry += (uint32_t) buf2 + (buf1 >> 32); acc2 = (uint32_t) carry; carry >>= 32;
+    carry += (uint32_t) buf3 + (buf2 >> 32); acc3 = (uint32_t) carry; carry >>= 32;
+    carry += (buf4 & 3);             acc4 = (uint32_t) carry;
 
-        acc0 = (uint32_t) buf0;
-        acc1 = (uint32_t) buf1;
-        acc2 = (uint32_t) buf2;
-        acc3 = (uint32_t) buf3;
-        acc4 = (uint32_t) buf4;
-
-        /* multiply r */
-        /* compute acc * r */
-        buf0 = (uint64_t) acc0 * r0 +
-                 (uint64_t) 5 * acc1 * (r3 >> 2) + (uint64_t) 5 * acc2 * (r2 >> 2) + (uint64_t) 5 * acc3 * (r1 >> 2) + (uint64_t) 5 * acc4 * (r0 >> 2);
-        buf1 = (uint64_t) acc0 * r1 + (uint64_t) acc1 * r0 +
-                 (uint64_t) 5 * acc2 * (r3 >> 2) + (uint64_t) 5 * acc3 * (r2 >> 2) + (uint64_t) 5 * acc4 * (r1 >> 2);
-        buf2 = (uint64_t) acc0 * r2 + (uint64_t) acc1 * r1 + (uint64_t) acc2 * r0 +
-                 (uint64_t) 5 * acc3 * (r3 >> 2) + (uint64_t) 5 * acc4 * (r2 >> 2);
-        buf3 = (uint64_t) acc0 * r3 + (uint64_t) acc1 * r2 + (uint64_t) acc2 * r1 + (uint64_t) acc3 * r0 +
-                 (uint64_t) 5 * acc4 * (r3 >> 2);
-
-        /* compute carry */
-        buf4 = acc4 * (r0 & 3) + (buf3 >> 32);
-        carry = 5 * (buf4 >> 2);
-        carry += (uint32_t) buf0;                  acc0 = (uint32_t) carry; carry >>= 32;
-        carry += (uint32_t) buf1 + (buf0 >> 32); acc1 = (uint32_t) carry; carry >>= 32;
-        carry += (uint32_t) buf2 + (buf1 >> 32); acc2 = (uint32_t) carry; carry >>= 32;
-        carry += (uint32_t) buf3 + (buf2 >> 32); acc3 = (uint32_t) carry; carry >>= 32;
-        carry += (buf4 & 3);              acc4 = (uint32_t) carry;
-    }
+    /* calc poly finalize */
 
     /* add s */
     /* if 2^130 -5 < acc < 2^130 then acc = acc - (2^130 - 5) */
