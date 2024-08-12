@@ -24,33 +24,39 @@
     c += d;                                \
     b = rotl32(b ^ c, 7);
 
+#define MAC_LEN 16
+
 __mem40 uint8_t *receive_packet(__xread struct nbi_meta_catamaran *nbi_meta);
 void send_packet(__xread struct nbi_meta_catamaran *nbi_meta);
 void chacha20_poly1305_aead_encrypt(uint32_t *key, uint32_t *nonce, __mem40 uint32_t *plaintext, __mem40 uint32_t *ciphertext, int msg_len, uint32_t *aad, int aad_len, __mem40 uint32_t *tag);
 
-// key = 0x00010203_04050607_08090a0b_0c0d0e0f_10111213_14151617_18191a1b_1c1d1e1f
+// key = 0x80818283_84858687_88898a8b_8c8d8e8f_90919293_94959697_98999a9b_9c9d9e9f
 __shared __cls32 uint8_t key[32] = {
-    0x03, 0x02, 0x01, 0x00, 0x07, 0x06, 0x05, 0x04,
-    0x0b, 0x0a, 0x09, 0x08, 0x0f, 0x0e, 0x0d, 0x0c,
-    0x13, 0x12, 0x11, 0x10, 0x17, 0x16, 0x15, 0x14,
-    0x1b, 0x1a, 0x19, 0x18, 0x1f, 0x1e, 0x1d, 0x1c,
+    0x83, 0x82, 0x81, 0x80, 0x87, 0x86, 0x85, 0x84,
+    0x8b, 0x8a, 0x89, 0x88, 0x8f, 0x8e, 0x8d, 0x8c,
+    0x93, 0x92, 0x91, 0x90, 0x97, 0x96, 0x95, 0x94,
+    0x9b, 0x9a, 0x99, 0x98, 0x9f, 0x9e, 0x9d, 0x9c,
 };
 
-// nonce = 0x00000000_0000004a_00000000
+// nonce = 0x07000000_40414243_44454647
 __shared __cls32 uint8_t nonce[12] = {
-    0x00, 0x00, 0x00, 0x00, 0x4a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x07, 0x43, 0x42, 0x41, 0x40, 0x47, 0x46, 0x45, 0x44,
 };
 
-__shared __ctm32 uint8_t aad[32];
+// aad = 0x50515253_c0c1c2c3_c4c5c6c7
+__shared __ctm32 uint8_t aad[12] = {
+    0x53, 0x52, 0x51, 0x50, 0xc3, 0xc2, 0xc1, 0xc0,
+    0xc7, 0xc6, 0xc5, 0xc4,
+};
 
 int main(void) {
     __xread struct nbi_meta_catamaran nbi_meta;
     __mem40 uint8_t *pkt;
-    int offset = MAC_PREPEND_BYTES * 2 + NET_ETH_ALEN;
+    int offset = MAC_PREPEND_BYTES * 2 + NET_ETH_LEN + MAC_LEN;
 
     for (;;) {
         pkt = receive_packet(&nbi_meta);
-        chacha20_poly1305_aead_encrypt((uint32_t *)key, (uint32_t *)nonce, (__mem40 uint32_t *)(pkt+offset), (__mem40 uint32_t *)(pkt + offset), nbi_meta.pkt_info.len - offset, (uint32_t *)aad, 32, (__mem40 uint32_t *)(pkt + offset));
+        chacha20_poly1305_aead_encrypt((uint32_t *)key, (uint32_t *)nonce, (__mem40 uint32_t *)(pkt + offset), (__mem40 uint32_t *)(pkt + offset), nbi_meta.pkt_info.len - offset, (uint32_t *)aad, 12, (__mem40 uint32_t *)(pkt + offset - MAC_LEN));
         send_packet(&nbi_meta);
     }
 
@@ -91,7 +97,7 @@ void send_packet(__xread struct nbi_meta_catamaran *nbi_meta) {
     plen = nbi_meta->pkt_info.len - MAC_PREPEND_BYTES;
 
     /* Set egress tm queue */
-    q_dst = PORT_TO_CHANNEL(nbi_meta->port);
+    q_dst = PORT_TO_CHANNEL(nbi_meta->port == 3 ? 19 : 3);
 
     msi = pkt_msd_write(pbuf, pkt_off - MAC_PREPEND_BYTES);
     pkt_nbi_send(island, pnum, &msi, plen, NBI, q_dst, nbi_meta->seqr,
@@ -259,7 +265,7 @@ void chacha20_poly1305_aead_encrypt(uint32_t *key, uint32_t *nonce, __mem40 uint
     /* calc chacha20 and poly msg */
     len = msg_len;
     for (;;) {
-        if (len <= 0) return;
+        if (len <= 0) break;
 
         /* copy from CTM */
         data[0] = plaintext[0];
@@ -278,6 +284,23 @@ void chacha20_poly1305_aead_encrypt(uint32_t *key, uint32_t *nonce, __mem40 uint
         data[13] = plaintext[13];
         data[14] = plaintext[14];
         data[15] = plaintext[15];
+
+        data[0] = byte_swap(data[0]);
+        data[1] = byte_swap(data[1]);
+        data[2] = byte_swap(data[2]);
+        data[3] = byte_swap(data[3]);
+        data[4] = byte_swap(data[4]);
+        data[5] = byte_swap(data[5]);
+        data[6] = byte_swap(data[6]);
+        data[7] = byte_swap(data[7]);
+        data[8] = byte_swap(data[8]);
+        data[9] = byte_swap(data[9]);
+        data[10] = byte_swap(data[10]);
+        data[11] = byte_swap(data[11]);
+        data[12] = byte_swap(data[12]);
+        data[13] = byte_swap(data[13]);
+        data[14] = byte_swap(data[14]);
+        data[15] = byte_swap(data[15]);
 
         /* calc chacha20 */
         a0 = s0;
@@ -429,41 +452,41 @@ void chacha20_poly1305_aead_encrypt(uint32_t *key, uint32_t *nonce, __mem40 uint
 
         if (len < 61) {
             switch((len - 1) >> 2) {
-                case 14: ciphertext[14] = data[14];
-                case 13: ciphertext[13] = data[13];
-                case 12: ciphertext[12] = data[12];
-                case 11: ciphertext[11] = data[11];
-                case 10: ciphertext[10] = data[10];
-                case  9: ciphertext[9]  = data[9];
-                case  8: ciphertext[8]  = data[8];
-                case  7: ciphertext[7]  = data[7];
-                case  6: ciphertext[6]  = data[6];
-                case  5: ciphertext[5]  = data[5];
-                case  4: ciphertext[4]  = data[4];
-                case  3: ciphertext[3]  = data[3];
-                case  2: ciphertext[2]  = data[2];
-                case  1: ciphertext[1]  = data[1];
-                case  0: ciphertext[0]  = data[0];
+                case 14: ciphertext[14] = byte_swap(data[14]);
+                case 13: ciphertext[13] = byte_swap(data[13]);
+                case 12: ciphertext[12] = byte_swap(data[12]);
+                case 11: ciphertext[11] = byte_swap(data[11]);
+                case 10: ciphertext[10] = byte_swap(data[10]);
+                case  9: ciphertext[9]  = byte_swap(data[9]);
+                case  8: ciphertext[8]  = byte_swap(data[8]);
+                case  7: ciphertext[7]  = byte_swap(data[7]);
+                case  6: ciphertext[6]  = byte_swap(data[6]);
+                case  5: ciphertext[5]  = byte_swap(data[5]);
+                case  4: ciphertext[4]  = byte_swap(data[4]);
+                case  3: ciphertext[3]  = byte_swap(data[3]);
+                case  2: ciphertext[2]  = byte_swap(data[2]);
+                case  1: ciphertext[1]  = byte_swap(data[1]);
+                case  0: ciphertext[0]  = byte_swap(data[0]);
             }
             break;
         }
 
-        ciphertext[0]  = data[0];
-        ciphertext[1]  = data[1];
-        ciphertext[2]  = data[2];
-        ciphertext[3]  = data[3];
-        ciphertext[4]  = data[4];
-        ciphertext[5]  = data[5];
-        ciphertext[6]  = data[6];
-        ciphertext[7]  = data[7];
-        ciphertext[8]  = data[8];
-        ciphertext[9]  = data[9];
-        ciphertext[10] = data[10];
-        ciphertext[11] = data[11];
-        ciphertext[12] = data[12];
-        ciphertext[13] = data[13];
-        ciphertext[14] = data[14];
-        ciphertext[15] = data[15];
+        ciphertext[0]  = byte_swap(data[0]);
+        ciphertext[1]  = byte_swap(data[1]);
+        ciphertext[2]  = byte_swap(data[2]);
+        ciphertext[3]  = byte_swap(data[3]);
+        ciphertext[4]  = byte_swap(data[4]);
+        ciphertext[5]  = byte_swap(data[5]);
+        ciphertext[6]  = byte_swap(data[6]);
+        ciphertext[7]  = byte_swap(data[7]);
+        ciphertext[8]  = byte_swap(data[8]);
+        ciphertext[9]  = byte_swap(data[9]);
+        ciphertext[10] = byte_swap(data[10]);
+        ciphertext[11] = byte_swap(data[11]);
+        ciphertext[12] = byte_swap(data[12]);
+        ciphertext[13] = byte_swap(data[13]);
+        ciphertext[14] = byte_swap(data[14]);
+        ciphertext[15] = byte_swap(data[15]);
 
         s12++;
 
