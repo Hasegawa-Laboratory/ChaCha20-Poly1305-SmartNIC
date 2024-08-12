@@ -129,6 +129,6 @@
                 "ctm_target"                    : 36,
                 "packet_credits"                : 128,
                 "buffer_credits"                : 63
-             }	
+             }
     }
 }
