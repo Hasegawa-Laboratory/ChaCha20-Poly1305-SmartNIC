@@ -33,29 +33,84 @@ NFAS_BASE_INC   := -I. -I$(MICROC_BLOCKS_DIR) -I$(MICROC_LIBS_DIR) -I$(MICROC_IN
 
 .PHONY: clean cleanall load
 
-all: chacha_poly.fw
+all: tls_server.fw
 
-load: chacha_poly.fw
+load: tls_server.fw
 	@echo ---------------------------
 	@echo load firmware
 	@echo ---------------------------
-	sudo ./init/run.sh reload chacha_poly.fw
+	sudo ./init/run.sh reload tls_server.fw
 
-chacha_poly.fw: chacha_poly_obj.list blm_obj.list
+tls_server.fw: tls_server_obj.list blm_obj.list
 	@echo ---------------------------
 	@echo linking $@
 	@echo ---------------------------
 	$(NFLD) $(NFLDFLAGS) -mip -rtsyms \
-	-o $(SRC_DIR)/$@ -map $(SRC_DIR)/chacha_poly.map \
-	-u i32.me0 $(SRC_DIR)/chacha_poly_obj.list \
-	-u i33.me0 $(SRC_DIR)/chacha_poly_obj.list \
-	-u i34.me0 $(SRC_DIR)/chacha_poly_obj.list \
-	-u i35.me0 $(SRC_DIR)/chacha_poly_obj.list \
-	-u i36.me0 $(SRC_DIR)/chacha_poly_obj.list \
+	-o $(SRC_DIR)/$@ -map $(SRC_DIR)/tls_server.map \
+	-u i32.me0  $(SRC_DIR)/tls_server_obj.list \
+	-u i32.me1  $(SRC_DIR)/tls_server_obj.list \
+	-u i32.me2  $(SRC_DIR)/tls_server_obj.list \
+	-u i32.me3  $(SRC_DIR)/tls_server_obj.list \
+	-u i32.me4  $(SRC_DIR)/tls_server_obj.list \
+	-u i32.me5  $(SRC_DIR)/tls_server_obj.list \
+	-u i32.me6  $(SRC_DIR)/tls_server_obj.list \
+	-u i32.me7  $(SRC_DIR)/tls_server_obj.list \
+	-u i32.me8  $(SRC_DIR)/tls_server_obj.list \
+	-u i32.me9  $(SRC_DIR)/tls_server_obj.list \
+	-u i32.me10 $(SRC_DIR)/tls_server_obj.list \
+	-u i32.me11 $(SRC_DIR)/tls_server_obj.list \
+	-u i33.me0  $(SRC_DIR)/tls_server_obj.list \
+	-u i33.me1  $(SRC_DIR)/tls_server_obj.list \
+	-u i33.me2  $(SRC_DIR)/tls_server_obj.list \
+	-u i33.me3  $(SRC_DIR)/tls_server_obj.list \
+	-u i33.me4  $(SRC_DIR)/tls_server_obj.list \
+	-u i33.me5  $(SRC_DIR)/tls_server_obj.list \
+	-u i33.me6  $(SRC_DIR)/tls_server_obj.list \
+	-u i33.me7  $(SRC_DIR)/tls_server_obj.list \
+	-u i33.me8  $(SRC_DIR)/tls_server_obj.list \
+	-u i33.me9  $(SRC_DIR)/tls_server_obj.list \
+	-u i33.me10 $(SRC_DIR)/tls_server_obj.list \
+	-u i33.me11 $(SRC_DIR)/tls_server_obj.list \
+	-u i34.me0  $(SRC_DIR)/tls_server_obj.list \
+	-u i34.me1  $(SRC_DIR)/tls_server_obj.list \
+	-u i34.me2  $(SRC_DIR)/tls_server_obj.list \
+	-u i34.me3  $(SRC_DIR)/tls_server_obj.list \
+	-u i34.me4  $(SRC_DIR)/tls_server_obj.list \
+	-u i34.me5  $(SRC_DIR)/tls_server_obj.list \
+	-u i34.me6  $(SRC_DIR)/tls_server_obj.list \
+	-u i34.me7  $(SRC_DIR)/tls_server_obj.list \
+	-u i34.me8  $(SRC_DIR)/tls_server_obj.list \
+	-u i34.me9  $(SRC_DIR)/tls_server_obj.list \
+	-u i34.me10 $(SRC_DIR)/tls_server_obj.list \
+	-u i34.me11 $(SRC_DIR)/tls_server_obj.list \
+	-u i35.me0  $(SRC_DIR)/tls_server_obj.list \
+	-u i35.me1  $(SRC_DIR)/tls_server_obj.list \
+	-u i35.me2  $(SRC_DIR)/tls_server_obj.list \
+	-u i35.me3  $(SRC_DIR)/tls_server_obj.list \
+	-u i35.me4  $(SRC_DIR)/tls_server_obj.list \
+	-u i35.me5  $(SRC_DIR)/tls_server_obj.list \
+	-u i35.me6  $(SRC_DIR)/tls_server_obj.list \
+	-u i35.me7  $(SRC_DIR)/tls_server_obj.list \
+	-u i35.me8  $(SRC_DIR)/tls_server_obj.list \
+	-u i35.me9  $(SRC_DIR)/tls_server_obj.list \
+	-u i35.me10 $(SRC_DIR)/tls_server_obj.list \
+	-u i35.me11 $(SRC_DIR)/tls_server_obj.list \
+	-u i36.me0  $(SRC_DIR)/tls_server_obj.list \
+	-u i36.me1  $(SRC_DIR)/tls_server_obj.list \
+	-u i36.me2  $(SRC_DIR)/tls_server_obj.list \
+	-u i36.me3  $(SRC_DIR)/tls_server_obj.list \
+	-u i36.me4  $(SRC_DIR)/tls_server_obj.list \
+	-u i36.me5  $(SRC_DIR)/tls_server_obj.list \
+	-u i36.me6  $(SRC_DIR)/tls_server_obj.list \
+	-u i36.me7  $(SRC_DIR)/tls_server_obj.list \
+	-u i36.me8  $(SRC_DIR)/tls_server_obj.list \
+	-u i36.me9  $(SRC_DIR)/tls_server_obj.list \
+	-u i36.me10 $(SRC_DIR)/tls_server_obj.list \
+	-u i36.me11 $(SRC_DIR)/tls_server_obj.list \
 	-u i48.me0 $(SRC_DIR)/blm_obj.list \
 	-i i8 -e $(PICO_CODE)
 
-chacha_poly_obj.list: main.c
+tls_server_obj.list: main.c
 	@echo ---------------------------
 	@echo compile $@
 	@echo ---------------------------
